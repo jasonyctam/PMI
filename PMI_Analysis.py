@@ -15,9 +15,9 @@ class PMI_Analysis():
 ###################################################################
 ###################################################################
 
-    def __init__(self, corpus_path, textWindow):
+    def __init__(self, textFile, textWindow):
         
-        self.textlist = [os.path.join(corpus_path, fn) for fn in sorted(os.listdir(corpus_path))]
+        self.textFile = textFile
         self.textWindow = textWindow
         
         return 
@@ -32,6 +32,7 @@ class PMI_Analysis():
         self.wordCompArray = []
         pmi_all_Array = []
 
+        # Getting word combinations for comparisons
         for i in range(0, len(word_Array)):
             j = i + 1
             if i < len(word_Array)-1:
@@ -41,45 +42,36 @@ class PMI_Analysis():
                     pmi_all_Array.append(float(0))
                     j = j + 1
         
-        # Loop through the file list
-        for text_num in range(0,len(self.textlist)):
-            
-            pxy, px, py = self.runPMIAnalysis(text_num, word_Array)
-            
-            for i in range(0, len(self.wordCompArray)):
-            
-                if pxy[i] !=0:
-                    pmi = math.log(pxy[i]/(px[i]*py[i]),2)
-                    pmi_all_text = pmi_all_Array[i] + pmi
-                    pmi_all_Array[i] = pmi_all_text
-                    print self.wordCompArray[i], pmi_all_text
-                    del pmi
-                    del pmi_all_text
-                
-            del pxy
-            del py
-            del px
+        pxy, px, py = self.runPMIAnalysis(word_Array)
 
-        pmi_average = []    
-            
-        for i in range(0,len(pmi_all_Array)):
-            pmi_average.append(pmi_all_Array[i] / float(len(self.textlist)))
-        
+        # Calculate PMI
+        for i in range(0, len(self.wordCompArray)):
+            if pxy[i] !=0:
+                pmi = math.log(pxy[i]/(px[i]*py[i]),2)
+                pmi_all_Array[i] = pmi
+                print self.wordCompArray[i], pmi_all_Array[i]
+                del pmi
+
+        del pxy
+        del py
+        del px
+
         PMI_EndTime = time.time()
         
-        del pmi_all_Array
         del PMI_StartTime
         del PMI_EndTime
         
-        return self.wordCompArray, pmi_average
+        return self.wordCompArray, pmi_all_Array
         
 ###################################################################
 ###################################################################
 
-    def runPMIAnalysis(self, text_num, word_Array):
+    def runPMIAnalysis(self, word_Array):
+    
+        print 'Starts processing ' + self.textFile
     
         # Get file content into a 1D Array
-        wordlist = self.getFileArray(self.textlist[text_num], ' ')
+        wordlist = self.getFileArray(self.textFile, ' ')
 
         # Create a dataframe of of the 1D array
         DF_wordlist = pd.DataFrame({'List of Words':wordlist})
@@ -110,6 +102,9 @@ class PMI_Analysis():
             del p_y
             del wordOne
             del wordTwo
+            
+        del DF_wordlist
+        del wordlist_len
                 
         return pxy, px, py
 
@@ -218,6 +213,8 @@ class PMI_Analysis():
             # Split the single line with the input delimited into an array
             arrayLine = line.split(delimiter)
             
+            del line
+            
             print 'line: ' + repr(i) + ' arrayLine length: ' + repr(len(arrayLine))
 
             # Loop though each value of the line array and remove unnecessary strings
@@ -227,7 +224,7 @@ class PMI_Analysis():
                 contentArray.append(arrayLine[j].lower())
                 
             del arrayLine
-            del line
+            
             
         print 'Finished looping through file'
         del lines
@@ -259,4 +256,4 @@ if __name__ == "__main__":
     endTime = time.time()
     
     print "Time elapsed: " + repr(endTime-startTime)
-    
+   
