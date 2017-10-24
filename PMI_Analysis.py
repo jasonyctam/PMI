@@ -62,11 +62,11 @@ class PMI_Analysis():
             pxy, px, py = self.runPMIAnalysis(wordCompArray)
 
             # Calculate PMI
-            for i in range(0, len(wordCompArray)):
-                if pxy[i] !=0:
-                    pmi = math.log(pxy[i]/(px[i]*py[i]),2)
-                    pmi_Array[i] = pmi
-                    print wordCompArray[i], pmi_Array[i]
+            for j in range(0, len(wordCompArray)):
+                if pxy[j] !=0:
+                    pmi = math.log(pxy[j]/(px[j]*py[j]),2)
+                    pmi_Array[j] = pmi
+                    print wordCompArray[j], pmi_Array[j]
                     del pmi
 
             allWordCompArray.append(wordCompArray)
@@ -219,7 +219,7 @@ class PMI_Analysis():
     # Converts contents of input file in formats similar to CSVs into a string array
 
         # Open input file
-        processFile = open(inputFile, 'r')
+        processFile = open(inputFile, 'r', encoding='utf-8')
 
         # Read all the lines in the file
         lines = processFile.readlines()
