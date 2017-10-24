@@ -219,7 +219,7 @@ class PMI_Analysis():
     # Converts contents of input file in formats similar to CSVs into a string array
 
         # Open input file
-        processFile = open(inputFile, 'r', encoding='utf-8')
+        processFile = open(inputFile, 'r')
 
         # Read all the lines in the file
         lines = processFile.readlines()
