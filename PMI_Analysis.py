@@ -25,32 +25,54 @@ class PMI_Analysis():
 ###################################################################
 ###################################################################
 
-    def getPMI_Average(self, word_Array):
+    def getPMI_Average(self, wordList):
 
         PMI_StartTime = time.time()
+
+        print 'Starts processing ' + self.textFile
+    
+        # Get file content into a 1D Array
+        sourcelist = self.getFileArray(self.textFile, ' ')
+        self.wordlist_len = len(sourcelist)
         
-        self.wordCompArray = []
+        print 'Storing the wordlist into a dataframe....'
+        
+        # Create a dataframe of of the 1D array
+        self.DF_wordlist = pd.DataFrame({'List of Words':sourcelist})
+        
+        del sourcelist
+        
+        print 'Dropping unreadable values....'
+        # Drop unreadable values
+        self.DF_wordlist.dropna()
+
+        print 'Obtain the frequency of each word in a new column....'
+        # Obtain the frequency of each word in a new column
+        self.DF_wordlist['freq'] = self.DF_wordlist.groupby('List of Words')['List of Words'].transform('count')
+        
+        allWordCompArray = []
         pmi_all_Array = []
-
-        # Getting word combinations for comparisons
-        for i in range(0, len(word_Array)):
-            j = i + 1
-            if i < len(word_Array)-1:
-                while j < len(word_Array):
-                    print word_Array[i], word_Array[j]
-                    self.wordCompArray.append([word_Array[i], word_Array[j]])
-                    pmi_all_Array.append(float(0))
-                    j = j + 1
         
-        pxy, px, py = self.runPMIAnalysis(word_Array)
+        for i in range(0,len(wordList)):
+        
+            word_Array = wordList[i]
 
-        # Calculate PMI
-        for i in range(0, len(self.wordCompArray)):
-            if pxy[i] !=0:
-                pmi = math.log(pxy[i]/(px[i]*py[i]),2)
-                pmi_all_Array[i] = pmi
-                print self.wordCompArray[i], pmi_all_Array[i]
-                del pmi
+            wordCompArray, pmi_Array = self.getWordComp(word_Array)
+
+            pxy, px, py = self.runPMIAnalysis(wordCompArray)
+
+            # Calculate PMI
+            for i in range(0, len(wordCompArray)):
+                if pxy[i] !=0:
+                    pmi = math.log(pxy[i]/(px[i]*py[i]),2)
+                    pmi_Array[i] = pmi
+                    print wordCompArray[i], pmi_Array[i]
+                    del pmi
+
+            allWordCompArray.append(wordCompArray)
+            pmi_all_Array.append(pmi_Array)
+            del wordCompArray
+            del pmi_Array
 
         del pxy
         del py
@@ -61,39 +83,22 @@ class PMI_Analysis():
         del PMI_StartTime
         del PMI_EndTime
         
-        return self.wordCompArray, pmi_all_Array
+        return allWordCompArray, pmi_all_Array
         
 ###################################################################
 ###################################################################
 
-    def runPMIAnalysis(self, word_Array):
-    
-        print 'Starts processing ' + self.textFile
-    
-        # Get file content into a 1D Array
-        wordlist = self.getFileArray(self.textFile, ' ')
-
-        # Create a dataframe of of the 1D array
-        DF_wordlist = pd.DataFrame({'List of Words':wordlist})
-        
-        wordlist_len = len(wordlist)
-        
-        del wordlist
-
-        # Drop unreadable values
-        DF_wordlist.dropna()
-
-        # Obtain the frequency of each word in a new column
-        DF_wordlist['freq'] = DF_wordlist.groupby('List of Words')['List of Words'].transform('count')
+    def runPMIAnalysis(self, wordCompArray):
         
         pxy = []
         px = []
         py = []
         
-        for i in range(0, len(self.wordCompArray)):
-            wordOne = self.wordCompArray[i][0]
-            wordTwo = self.wordCompArray[i][1]
-            p_xy, p_x, p_y = self.calc_PMI(DF_wordlist, wordlist_len, wordOne, wordTwo)
+        print 'Looping through each word combination....'
+        for i in range(0, len(wordCompArray)):
+            wordOne = wordCompArray[i][0]
+            wordTwo = wordCompArray[i][1]
+            p_xy, p_x, p_y = self.calc_PMI(wordOne, wordTwo)
             pxy.append(p_xy)
             px.append(p_x)
             py.append(p_y)
@@ -103,41 +108,40 @@ class PMI_Analysis():
             del wordOne
             del wordTwo
             
-        del DF_wordlist
-        del wordlist_len
+        del wordCompArray
                 
         return pxy, px, py
 
 ###################################################################
 ###################################################################
 
-    def calc_PMI(self, DF_wordlist, wordlist_len, wordOne, wordTwo):
+    def calc_PMI(self, wordOne, wordTwo):
         
         # Acquire the count value of each word
         print 'Acquire the count value of ' + wordOne + ' and ' + wordTwo + '...'
-        if len(DF_wordlist.loc[DF_wordlist['List of Words'] == wordOne]['freq'].values) > 0:
-            word1_count = DF_wordlist.loc[DF_wordlist['List of Words'] == wordOne]['freq'].values[0]
+        if len(self.DF_wordlist.loc[self.DF_wordlist['List of Words'] == wordOne]['freq'].values) > 0:
+            word1_count = self.DF_wordlist.loc[self.DF_wordlist['List of Words'] == wordOne]['freq'].values[0]
         else:
             word1_count = 0
             
-        if len(DF_wordlist.loc[DF_wordlist['List of Words'] == wordTwo]['freq'].values) > 0:
-            word2_count = DF_wordlist.loc[DF_wordlist['List of Words'] == wordTwo]['freq'].values[0]
+        if len(self.DF_wordlist.loc[self.DF_wordlist['List of Words'] == wordTwo]['freq'].values) > 0:
+            word2_count = self.DF_wordlist.loc[self.DF_wordlist['List of Words'] == wordTwo]['freq'].values[0]
         else:
             word2_count = 0
 
         print 'If both words are present....'
         if word1_count != 0 and word2_count != 0:
-            px = float(word1_count) / float(wordlist_len)
-            py = float(word2_count) / float(wordlist_len)
+            px = float(word1_count) / float(self.wordlist_len)
+            py = float(word2_count) / float(self.wordlist_len)
             
             del word1_count
             del word2_count
 
             # Acquire array of index for each word
-            word1_index = DF_wordlist.loc[DF_wordlist['List of Words'] == wordOne]['freq'].index.values
-            word2_index = DF_wordlist.loc[DF_wordlist['List of Words'] == wordTwo]['freq'].index.values
+            word1_index = self.DF_wordlist.loc[self.DF_wordlist['List of Words'] == wordOne]['freq'].index.values
+            word2_index = self.DF_wordlist.loc[self.DF_wordlist['List of Words'] == wordTwo]['freq'].index.values
             
-            del DF_wordlist
+            #del DF_wordlist
 
             # Converting the arrays of index to dataframes
             DF_word1_index = pd.DataFrame({'word1_index':word1_index})
@@ -179,7 +183,7 @@ class PMI_Analysis():
             
             print 'coocurrence: ' + repr(coocurrence)
             
-            pxy = float(coocurrence) / float(wordlist_len)
+            pxy = float(coocurrence) / float(self.wordlist_len)
             
         else:
             pxy = 0
@@ -187,6 +191,26 @@ class PMI_Analysis():
             py = 0
         
         return pxy, px, py
+    
+###################################################################
+###################################################################
+
+    def getWordComp(self, word_Array):
+
+        wordCompArray = []
+        pmiArray = []
+
+        # Getting word combinations for comparisons
+        for i in range(0, len(word_Array)):
+            j = i + 1
+            if i < len(word_Array)-1:
+                while j < len(word_Array):
+                    #print word_Array[i], word_Array[j]
+                    wordCompArray.append([word_Array[i], word_Array[j]])
+                    pmiArray.append(float(0))
+                    j = j + 1
+                    
+        return wordCompArray, pmiArray
     
 ###################################################################
 ###################################################################
@@ -256,4 +280,4 @@ if __name__ == "__main__":
     endTime = time.time()
     
     print "Time elapsed: " + repr(endTime-startTime)
-   
+    
